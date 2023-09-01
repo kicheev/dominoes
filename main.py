@@ -85,18 +85,35 @@ def current_game_status(computer_pieces: list, user_pieces: list, stock_pieces: 
 def computer_turn(computer_pieces: list, domino_snake: list, stock_pieces: list) -> int:
     """Computer turn."""
     user_input = input("Status: Computer is about to make a move. Press Enter to continue...\n")
-    computer_inputs = [i * j for i in range(1, len(computer_pieces)) for j in (-1, 1)]
-    shuffle(computer_inputs)
+
+    all_dominoes = domino_snake + computer_pieces
+    all_domino_score = {}
+    computer_domino_score = {}
+    for i in all_dominoes:
+        for j in i:
+            if j in all_domino_score:
+                all_domino_score[j] += 1
+            else:
+                all_domino_score[j] = 1
+    for i, d in enumerate(computer_pieces):
+        computer_domino_score[i] = (all_domino_score[d[0]] + all_domino_score[d[1]])
+    computer_domino_score = dict(sorted(computer_domino_score.items(), key=lambda item: item[1], reverse=True))
+
+    # print(all_domino_score)
+    # print(computer_pieces)
+    # print(computer_domino_score)
+
     computer_input = 0
-    for i in computer_inputs:
-        if i > 0 and domino_snake[-1][-1] in computer_pieces[abs(i)]:
-            place_domino(i + 1, computer_pieces, domino_snake)
-            computer_input = i
-            break
-        elif i < 0 and domino_snake[0][0] in computer_pieces[abs(i)]:
-            place_domino(i - 1, computer_pieces, domino_snake)
-            computer_input = i
-            break
+    for i in computer_domino_score:
+        for j in computer_pieces[i]:
+            if j == domino_snake[0][0]:
+                computer_input = -1 * (i + 1)
+                place_domino(computer_input, computer_pieces, domino_snake)
+                return computer_input
+            elif j == domino_snake[-1][-1]:
+                computer_input = i + 1
+                place_domino(computer_input, computer_pieces, domino_snake)
+                return computer_input
     else:
         if stock_pieces:
             get_domino(computer_pieces, stock_pieces)
