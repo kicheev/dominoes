@@ -18,8 +18,7 @@ def generate_dominoes() -> list:
 
 
 def finding_start_domino(player_one: list, player_two: list) -> list:
-    """Finding tht start player"""
-
+    """Finding the start player."""
     player_one_doubles = [d for d in player_one if d[0] == d[1]]
     player_two_doubles = [d for d in player_two if d[0] == d[1]]
 
@@ -65,9 +64,10 @@ def start_deal(dominoes: list) -> (list, list, list, list):
 
 
 def current_game_status(computer_pieces: list, user_pieces: list, stock_pieces: list, domino_snake: list) -> None:
+    """Current game status."""
     print('=' * 70)
-    print('Stock size:', len(stock_pieces))
-    print('Computer pieces:', len(computer_pieces))
+    print("Stock size:", len(stock_pieces))
+    print("Computer pieces:", len(computer_pieces))
     print()
 
     if len(domino_snake) < 7:
@@ -76,50 +76,85 @@ def current_game_status(computer_pieces: list, user_pieces: list, stock_pieces: 
         print(*domino_snake[:3], '...',  *domino_snake[-3:], sep='')
     print()
 
-    print('Your pieces:')
+    print("Your pieces:")
     for i, d in enumerate(user_pieces, start=1):
         print(f'{i}:{d}')
     print()
 
 
-def user_turn(user_pieces: list, domino_snake: list, stock_pieces: list) -> None:
-    user_input = user_input_check(list(range(len(user_pieces) + 1)))
-    if user_input == 0:
-        get_domino(user_pieces, stock_pieces)
+def computer_turn(computer_pieces: list, domino_snake: list, stock_pieces: list) -> int:
+    """Computer turn."""
+    user_input = input("Status: Computer is about to make a move. Press Enter to continue...\n")
+    computer_inputs = [i * j for i in range(1, len(computer_pieces)) for j in (-1, 1)]
+    shuffle(computer_inputs)
+    computer_input = 0
+    for i in computer_inputs:
+        if i > 0 and domino_snake[-1][-1] in computer_pieces[abs(i)]:
+            place_domino(i + 1, computer_pieces, domino_snake)
+            computer_input = i
+            break
+        elif i < 0 and domino_snake[0][0] in computer_pieces[abs(i)]:
+            place_domino(i - 1, computer_pieces, domino_snake)
+            computer_input = i
+            break
     else:
-        place_domino(user_input, user_pieces, domino_snake)
+        if stock_pieces:
+            get_domino(computer_pieces, stock_pieces)
+        computer_input = 0
+    return computer_input
 
 
-def place_domino(space: int, pieces: list, domino_snake: list) -> None:
-    if space > 0:
-        domino_snake.append(pieces.pop(abs(space)-1))
-    else:
-        domino_snake.insert(0, pieces.pop(abs(space)-1))
-
-
-def get_domino(player_pieces: list, stock_pieces: list) -> None:
-    player_pieces.append(stock_pieces.pop())
-
-
-def user_input_check(required_input: list) -> int:
+def user_turn(user_pieces: list, domino_snake: list, stock_pieces: list) -> int:
+    """User turn."""
     print("Status: It's your turn to make a move. Enter your command.")
     while True:
         user_input = input()
         if user_input.lstrip('-').isdigit():
-            if abs(int(user_input)) in required_input:
-                return int(user_input)
+            user_input = int(user_input)
+            if abs(user_input) <= len(user_pieces):
+                if user_input == 0:
+                    if stock_pieces:
+                        get_domino(user_pieces, stock_pieces)
+                    return user_input
+                elif user_input > 0 and domino_snake[-1][-1] in user_pieces[abs(user_input)-1]:
+                    place_domino(user_input, user_pieces, domino_snake)
+                    return user_input
+                elif user_input < 0 and domino_snake[0][0] in user_pieces[abs(user_input)-1]:
+                    place_domino(user_input, user_pieces, domino_snake)
+                    return user_input
+                else:
+                    print("Illegal move. Please try again.")
             else:
-                print('Invalid input. Please try again.')
+                print("Invalid input. Please try again.")
         else:
-            print('Invalid input. Please try again.')
+            print("Invalid input. Please try again.")
 
 
-def end_game_check(computer_pieces: list, user_pieces: list, domino_snake: list) -> bool:
+def place_domino(player_input: int, player_pieces: list, domino_snake: list) -> None:
+    """Placing domino in a snake."""
+    piece = player_pieces[abs(player_input)-1]
+    if player_input > 0:
+        if domino_snake[-1][-1] != piece[0]:
+            piece.reverse()
+        domino_snake.append(player_pieces.pop(player_input-1))
+    else:
+        if domino_snake[0][0] != piece[1]:
+            piece.reverse()
+        domino_snake.insert(0, player_pieces.pop(abs(player_input) - 1))
+
+
+def get_domino(player_pieces: list, stock_pieces: list) -> None:
+    """Getting domino from stock."""
+    player_pieces.append(stock_pieces.pop())
+
+
+def end_game_check(computer_pieces: list, user_pieces: list, domino_snake: list, last_computer_turn: int, last_user_turn: int, stock_pieces: list) -> bool:
+    """Checking the end of the game"""
     if len(computer_pieces) == 0:
-        print('Status: The game is over. The computer won!')
+        print("Status: The game is over. The computer won!")
         return True
     elif len(user_pieces) == 0:
-        print('Status: The game is over. You won!')
+        print("Status: The game is over. You won!")
         return True
 
     if len(domino_snake) > 6 and domino_snake[0][0] == domino_snake[-1][-1]:
@@ -133,6 +168,9 @@ def end_game_check(computer_pieces: list, user_pieces: list, domino_snake: list)
             print("Status: The game is over. It's a draw!")
             return True
 
+    if (not stock_pieces) and last_user_turn == last_computer_turn == 0:
+        print("Status: The game is over. It's a draw!")
+        return True
     return False
 
 
@@ -145,18 +183,17 @@ if __name__ == "__main__":
     if len(computer_pieces) < len(user_pieces):
         active_player = next(player_cycle)
 
+    last_computer_turn = 0
+    last_user_turn = 0
     while True:
         current_game_status(computer_pieces, user_pieces, stock_pieces, domino_snake)
 
+        if end_game_check(computer_pieces, user_pieces, domino_snake, last_computer_turn, last_user_turn, stock_pieces):
+            break
+
         if active_player == 'computer':
-            if end_game_check(computer_pieces, user_pieces, domino_snake):
-                break
-            user_input = input("Status: Computer is about to make a move. Press Enter to continue...\n")
-            computer_input = choice((-1, 1)) * choice(list(range(len(computer_pieces))))
-            place_domino(computer_input, computer_pieces, domino_snake)
+            last_computer_turn = computer_turn(computer_pieces, domino_snake, stock_pieces)
         else:
-            if end_game_check(computer_pieces, user_pieces, domino_snake):
-                break
-            user_turn(user_pieces, domino_snake, stock_pieces)
+            last_user_turn = user_turn(user_pieces, domino_snake, stock_pieces)
 
         active_player = next(player_cycle)
